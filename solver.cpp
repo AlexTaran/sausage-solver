@@ -34,6 +34,22 @@ struct std::hash<Vec> {
   }
 };
 
+char PlayerDirectionToChar(const Vec& v) {
+  if (v == Vec(-1, 0)) return '<';
+  if (v == Vec(0, -1)) return '^';
+  if (v == Vec(0, 1))  return 'V';
+  if (v == Vec(1, 0))  return '>';
+  return '?';
+}
+
+Vec PlayerCharToDirection(char ch) {
+  if (ch == '<') return Vec(-1, 0);
+  if (ch == '^') return Vec(0, -1);
+  if (ch == 'V') return Vec(0, 1);
+  if (ch == '>') return Vec(1, 0);
+  return Vec(0, 0);
+}
+
 class Sausage {
  public:
   Sausage(const vector<Vec>& points) : points(points) {
@@ -84,7 +100,7 @@ class Sausage {
 	return true;
   }
  
-  void Roll(const Vec& dv) {
+  void roll(const Vec& dv) {
     for (auto& p: points) {
       p = p + dv;
     }
@@ -95,8 +111,18 @@ class Sausage {
     }
   }
 
-  bool HasPoint(const Vec& p) {
+  bool hasPoint(const Vec& p) {
 	return find(points.begin(), points.end(), p) != points.end();
+  }
+
+  template<template<class T> class Collection>
+  bool hasAnyOfPoints(const Collection<Vec>& points) {
+    for (const auto& p: points) {
+	  if (hasPoint(p)) {
+	    return true;
+	  }
+	}
+	return false;
   }
 
   template<template<class T> class Collection>
@@ -110,6 +136,10 @@ class Sausage {
 
   const vector<Vec>& getPoints() const {
     return points;
+  }
+
+  const vector<pair<int, int>>& getGrilled() const {
+    return grilled;
   }
 
   size_t hash() const {
@@ -152,6 +182,7 @@ class Field {
 	  }
 	}
   }
+
   bool isSausageSupported(const Sausage& s) const {
     for (const auto& v: s.getPoints()) {
 	  if (supportPoints.contains(v)) {
@@ -165,8 +196,12 @@ class Field {
     s.grillByPoints(grillPoints);
   }
 
-  bool IsPlayerPositionValid(const Vec& pos) const {
+  bool isPlayerPositionValid(const Vec& pos) const {
 	return supportPoints.contains(pos) and !grillPoints.contains(pos);
+  }
+
+  const vector<string>& getField() const {
+    return field;
   }
 
  private:
@@ -200,7 +235,111 @@ class Position {
 	return result;
   }
 
+  bool isWinning() const {
+	for (const auto& s: sausages) {
+	  if (!s.isReady()) {
+	    return false;
+	  }
+	}
+	return true;
+  }
+
+  bool isLosing() const {
+	for (const auto& s: sausages) {
+	  if (s.isBurned() || !field->isSausageSupported(s)) {
+	    return true;
+	  }
+	}
+	return !isPlayerStateValid();
+  }
+
+  vector<Position> expand() const {  // Returns adjacent 4 positions
+    // Forward
+    Position fwd(*this);
+    Vec fwdDir = directionForward();
+    fwd.playerPos = fwd.playerPos + fwdDir;
+    fwd.touchAllSausages(fwd.playerPos + fwdDir, fwdDir);
+    // Backward
+    Position bck(*this);
+    Vec bckDir = directionBackward();
+    bck.playerPos = bck.playerPos + bckDir;
+    bck.touchAllSausages(bck.playerPos, bckDir);
+    // Left
+    Position lft(*this);
+    Vec lftDir = directionLeft();
+    lft.playerDir = lftDir;
+    lft.touchAllSausages(fwd.playerPos + lftDir, lftDir);
+    lft.touchAllSausages(lft.playerPos + lftDir, bckDir);
+    // Right
+    Position rgh(*this);
+    Vec rghDir = directionRight();
+    rgh.playerDir = rghDir;
+    rgh.touchAllSausages(fwd.playerPos + rghDir, rghDir);
+    rgh.touchAllSausages(rgh.playerPos + rghDir, bckDir);
+    return vector<Position> {fwd, bck, lft, rgh};
+  }
+
+  void render() {
+	vector<string> lines = field->getField();
+    lines[playerPos.y][playerPos.x] = PlayerDirectionToChar(playerDir);
+    for (int i = 0; i < sausages.size(); ++i) {
+      for (const auto& gr: sausages[i].getGrilled()) {
+        cout << "[" << gr.first << ", " << gr.second << "] ";
+      }
+      cout << endl;
+      for (const auto& p: sausages[i].getPoints()) {
+        lines[p.y][p.x] = '0' + i;
+      }
+    }
+    for (const auto& l: lines) {
+      cout << l << endl;
+    }
+  }
+
  private:
+  Vec directionLeft() const {
+    return Vec(playerDir.y, -playerDir.x);
+  }
+
+  Vec directionRight() const {
+    return Vec(-playerDir.y, playerDir.x);
+  }
+
+  Vec directionForward() const {
+    return playerDir;
+  }
+
+  Vec directionBackward() const {
+    return Vec(-playerDir.x, -playerDir.y);
+  }
+
+  void touchAllSausages(const Vec& point, const Vec& direction) {
+    vector<bool> moved(sausages.size(), false);
+    vector<Vec> touchPoints {point};
+    vector<Vec> nextTouchPoints;
+    while (touchPoints.size() > 0) {
+      for (int i = 0; i < sausages.size(); ++i) {
+        if (moved[i]) {
+          continue;
+        }
+        if (sausages[i].hasAnyOfPoints(touchPoints)) {
+          sausages[i].roll(direction);
+          field->grillSausage(sausages[i]);
+          moved[i] = true;
+		  for (const auto& p: sausages[i].getPoints()) {
+		    nextTouchPoints.push_back(p);
+		  }
+        }
+      }
+      touchPoints = nextTouchPoints;
+      nextTouchPoints.clear();
+    }
+  }
+
+  bool isPlayerStateValid() const {
+    return field->isPlayerPositionValid(playerPos);
+  }
+
   const Field* field;
   vector<Sausage> sausages;
   Vec playerPos;
