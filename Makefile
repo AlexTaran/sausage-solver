@@ -1,6 +1,6 @@
 all: build
 build:
-	g++ -O2 -o solver solver.cpp 
+	g++ -std=c++2a -O2 -o solver solver.cpp 
 run:
 	./solver
 clean:

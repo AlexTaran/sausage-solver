@@ -98,7 +98,7 @@ class Field:
     sausage.GrillByPoints(self._grillPoints)
 
   def IsPlayerPositionValid(self, pos):
-    return any([pos == pt for pt in self._supportPoints]) and all([pos != pt for pt in self._grillPoints])
+    return pos in self._supportPoints and pos not in self._grillPoints
 
 tuples = set()
 
