@@ -178,27 +178,32 @@ struct std::hash<Sausage> {
 
 class Field {
  public:
-  Field(const vector<string>& field) : field(field) {
+  Field(const vector<string>& field, const Vec& startPos, const Vec& startDir)
+    : field(field), startPos(startPos), startDir(startDir) {
     for (int y = 0; y < field.size(); ++y) {
-	  for (int x = 0; x < field[y].size(); ++x) {
-		char ch = field[y][x];
-		if (ch == 'G') {
-		  grillPoints.insert(Vec(x, y));
-		}
-		if (ch == 'G' || ch == 'L') {
-		  supportPoints.insert(Vec(x, y));
-		}
-	  }
-	}
+      for (int x = 0; x < field[y].size(); ++x) {
+        char ch = field[y][x];
+        if (ch == 'G') {
+          grillPoints.insert(Vec(x, y));
+        }
+        if (ch == 'G' || ch == 'L') {
+          supportPoints.insert(Vec(x, y));
+        }
+      }
+    }
   }
 
   bool isSausageSupported(const Sausage& s) const {
     for (const auto& v: s.getPoints()) {
-	  if (supportPoints.contains(v)) {
-	    return true;
-	  }
+      if (supportPoints.contains(v)) {
+        return true;
+      }
     }
-	return false;
+    return false;
+  }
+
+  bool isPointGrilled(const Vec& p) const {
+    return grillPoints.contains(p);
   }
 
   void grillSausage(Sausage& s) const {
@@ -206,15 +211,25 @@ class Field {
   }
 
   bool isPlayerPositionValid(const Vec& pos) const {
-	return supportPoints.contains(pos) and !grillPoints.contains(pos);
+    return supportPoints.contains(pos) and !grillPoints.contains(pos);
   }
 
   const vector<string>& getField() const {
     return field;
   }
 
+  Vec getStartPos() const {
+    return startPos;
+  }
+
+  Vec getStartDir() const {
+    return startDir;
+  }
+
  private:
   vector<string> field;
+  Vec startPos;
+  Vec startDir;
   unordered_set<Vec> grillPoints;
   unordered_set<Vec> supportPoints;
 };
@@ -245,21 +260,21 @@ class Position {
   }
 
   bool isWinning() const {
-	for (const auto& s: sausages) {
-	  if (!s.isReady()) {
-	    return false;
-	  }
-	}
-	return true;
+    for (const auto& s: sausages) {
+      if (!s.isReady()) {
+        return false;
+      }
+    }
+    return playerPos == field->getStartPos() && playerDir == field->getStartDir();
   }
 
   bool isLosing() const {
-	for (const auto& s: sausages) {
-	  if (s.isBurned() || !field->isSausageSupported(s)) {
-	    return true;
-	  }
-	}
-	return !isPlayerStateValid();
+    for (const auto& s: sausages) {
+      if (s.isBurned() || !field->isSausageSupported(s)) {
+        return true;
+      }
+    }
+    return !isPlayerStateValid();
   }
 
   vector<Position> expand() const {  // Returns adjacent 4 positions
@@ -268,6 +283,9 @@ class Position {
     Vec fwdDir = directionForward();
     fwd.playerPos = fwd.playerPos + fwdDir;
     fwd.touchAllSausages(fwd.playerPos + fwdDir, fwdDir);
+    if (field->isPointGrilled(fwd.playerPos)) {
+      fwd.playerPos = playerPos;
+    }
     // Backward
     Position bck(*this);
     Vec bckDir = directionBackward();
@@ -370,7 +388,7 @@ pair<Field*, Position> POS1() {
     " LLLLL ",
     " LGGGL ",
     "       ",
-  });
+  }, Vec(1, 4), PlayerCharToDirection('^'));
 
   vector<Sausage> sausages {
     Sausage(vector<Vec>{Vec(1, 2), Vec(2, 2)}),
@@ -378,7 +396,7 @@ pair<Field*, Position> POS1() {
     Sausage(vector<Vec>{Vec(4, 3), Vec(5, 3)}),
   };
 
-  Position position(field, sausages, Vec(1, 4), PlayerCharToDirection('^'));
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
   return make_pair(field, position);
 }
 
@@ -390,14 +408,98 @@ pair<Field*, Position> POS3() {
     " LGLLG ",
     " LLLLL ",
     "       ",
-  });
+  }, Vec(1, 4), PlayerCharToDirection('^'));
 
   vector<Sausage> sausages {
     Sausage(vector<Vec>{Vec(3, 2), Vec(3, 3)}),
     Sausage(vector<Vec>{Vec(4, 2), Vec(4, 3)}),
   };
 
-  Position position(field, sausages, Vec(1, 4), PlayerCharToDirection('^'));
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS4() {
+  Field* field = new Field({
+    "      ",
+    " LLLL ",
+    " LLLG ",
+    " GLLL ",
+    " LLLL ",
+    "      ",
+  }, Vec(1, 2), PlayerCharToDirection('^'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(2, 3), Vec(2, 4)}),
+    Sausage(vector<Vec>{Vec(3, 1), Vec(3, 2)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS5() {
+  Field* field = new Field({
+    "           ",
+    "   LLLLLLL ",
+    "   L L   L ",
+    " GGGG    L ",
+    " GGGGLLLLL ",
+    "           ",
+    "LLGG       ",
+    "           ",
+  }, Vec(9, 4), PlayerCharToDirection('^'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(5, 3), Vec(5, 4)}),
+    Sausage(vector<Vec>{Vec(6, 3), Vec(6, 4)}),
+    Sausage(vector<Vec>{Vec(7, 3), Vec(7, 4)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS6() {
+  Field* field = new Field({
+    "         ",
+    "  LLLLLL ",
+    "  GG   L ",
+    "  GG GGL ",
+    " LLLLGGL ",
+    "  GGLLLL ",
+    "  GGL    ",
+    "  LLL    ",
+    "         ",
+  }, Vec(1, 4), PlayerCharToDirection('>'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(2, 1), Vec(3, 1)}),
+    Sausage(vector<Vec>{Vec(2, 7), Vec(3, 7)}),
+    Sausage(vector<Vec>{Vec(7, 3), Vec(7, 4)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS7() {
+  Field* field = new Field({
+    "       ",
+    " LGG   ",
+    " LGGLL ",
+    " LGG   ",
+    "    LL ",
+    "    LL ",
+    "       ",
+  }, Vec(5, 5), PlayerCharToDirection('^'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(4, 1), Vec(4, 2)}),
+    Sausage(vector<Vec>{Vec(4, 4), Vec(4, 5)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
   return make_pair(field, position);
 }
 
@@ -405,7 +507,7 @@ const int DBGSTEP = 10000;
 
 int main() {
   cout << "Faster solver" << endl;
-  auto pos = POS1();
+  auto pos = POS7();
 
   unordered_map<Position, int> visited;
   visited.insert(make_pair(pos.second, 0));
@@ -419,11 +521,11 @@ int main() {
   int vthresh = DBGSTEP;
 
   while(q.size() > 0) {
-	Position elem = q.front();
-	q.pop_front();
-	if (elem.isLosing()) {
-	  continue;
-	}
+    Position elem = q.front();
+    q.pop_front();
+    if (elem.isLosing()) {
+      continue;
+    }
     if (visited.size() > vthresh) {
       cout << "Depth " << visited[elem] << " total " << visited.size() << endl;
       vthresh += DBGSTEP;
