@@ -503,11 +503,87 @@ pair<Field*, Position> POS7() {
   return make_pair(field, position);
 }
 
+pair<Field*, Position> POS8() {
+  Field* field = new Field({
+    "      ",
+    " LLGL ",
+    "  L L ",
+    " LGLL ",
+    " LLL  ",
+    "      ",
+  }, Vec(4, 3), PlayerCharToDirection('<'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(1, 3), Vec(1, 4)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS9() {
+  Field* field = new Field({
+    "      ",
+    " LLLL ",
+    " LLGL ",
+    " LGLL ",
+    " LLLL ",
+    "      ",
+  }, Vec(2, 4), PlayerCharToDirection('>'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(1, 2), Vec(2, 2)}),
+    Sausage(vector<Vec>{Vec(4, 2), Vec(4, 3)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS10() {
+  Field* field = new Field({
+    "       ",
+    " LLLG  ",
+    " LLLGG ",
+    " LLL   ",
+    " LGG   ",
+    "  GG   ",
+    "       ",
+  }, Vec(2, 3), PlayerCharToDirection('<'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(1, 1), Vec(1, 2)}),
+    Sausage(vector<Vec>{Vec(2, 2), Vec(3, 2)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS11() {
+  Field* field = new Field({
+    "        ",
+    " LLLLLL ",
+    " LLGG L ",
+    "   GG L ",
+    "        ",
+  }, Vec(1, 1), PlayerCharToDirection('>'));
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(3, 1), Vec(4, 1)}),
+    Sausage(vector<Vec>{Vec(2, 2), Vec(2, 3)}),
+  };
+
+  Position position(field, sausages, field->getStartPos(), field->getStartDir());
+  return make_pair(field, position);
+}
+
+
 const int DBGSTEP = 10000;
 
 int main() {
   cout << "Faster solver" << endl;
-  auto pos = POS7();
+  auto pos = POS11();
 
   unordered_map<Position, int> visited;
   visited.insert(make_pair(pos.second, 0));
