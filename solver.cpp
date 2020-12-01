@@ -1,10 +1,19 @@
 #include <algorithm>
 #include <iostream>
+#include <list>
 #include <unordered_set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 using namespace std;
+
+int abs(int x) {
+ if (x < 0) {
+   return -x;
+ }
+ return x;
+}
 
 template <class T>
 inline void combine(size_t& seed, const T& v) {
@@ -104,7 +113,7 @@ class Sausage {
     for (auto& p: points) {
       p = p + dv;
     }
-    if ((isHorizontal() && dv.y % 2 == 1) || (isVertical() && dv.x % 2 == 1)) {
+    if ((isHorizontal() && (abs(dv.y) % 2 == 1)) || (isVertical() && (abs(dv.x) % 2 == 1))) {
       for (auto& g: grilled) {
 		swap(g.first, g.second);
 	  }
@@ -353,7 +362,95 @@ struct std::hash<Position> {
   }
 };
 
+pair<Field*, Position> POS1() {
+  Field* field = new Field({
+    "       ",
+    " LGGGL ",
+    " LLLLL ",
+    " LLLLL ",
+    " LGGGL ",
+    "       ",
+  });
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(1, 2), Vec(2, 2)}),
+    Sausage(vector<Vec>{Vec(3, 2), Vec(3, 3)}),
+    Sausage(vector<Vec>{Vec(4, 3), Vec(5, 3)}),
+  };
+
+  Position position(field, sausages, Vec(1, 4), PlayerCharToDirection('^'));
+  return make_pair(field, position);
+}
+
+pair<Field*, Position> POS3() {
+  Field* field = new Field({
+    "       ",
+    " LLLLL ",
+    " LGLLG ",
+    " LGLLG ",
+    " LLLLL ",
+    "       ",
+  });
+
+  vector<Sausage> sausages {
+    Sausage(vector<Vec>{Vec(3, 2), Vec(3, 3)}),
+    Sausage(vector<Vec>{Vec(4, 2), Vec(4, 3)}),
+  };
+
+  Position position(field, sausages, Vec(1, 4), PlayerCharToDirection('^'));
+  return make_pair(field, position);
+}
+
+const int DBGSTEP = 10000;
 
 int main() {
   cout << "Faster solver" << endl;
+  auto pos = POS1();
+
+  unordered_map<Position, int> visited;
+  visited.insert(make_pair(pos.second, 0));
+
+  unordered_map<Position, Position> prevs;
+  prevs.insert(make_pair(pos.second, pos.second));
+
+  list<Position> q;
+  q.push_back(pos.second);
+
+  int vthresh = DBGSTEP;
+
+  while(q.size() > 0) {
+	Position elem = q.front();
+	q.pop_front();
+	if (elem.isLosing()) {
+	  continue;
+	}
+    if (visited.size() > vthresh) {
+      cout << "Depth " << visited[elem] << " total " << visited.size() << endl;
+      vthresh += DBGSTEP;
+    }
+    if (elem.isWinning()) {
+      cout << "Found for " << visited[elem] << " moves" << endl;
+      vector<Position> lst {elem};
+      while (!(prevs.find(elem)->second == elem)) {
+        lst.insert(lst.begin(), prevs.find(elem)->second);
+        elem = prevs.find(elem)->second;
+      }
+      for (int i = 0; i < lst.size(); ++i) {
+        cout << i << ")" << endl;
+        lst[i].render();
+      }
+      break;
+    }
+    auto positions = elem.expand();
+    for (const auto& pos: positions) {
+      if (visited.contains(pos)) {
+        continue;
+      }
+      visited[pos] = visited[elem] + 1;
+      prevs.insert(make_pair(pos, elem));
+      q.push_back(pos);
+    }
+  }
+
+  delete pos.first;
 }
