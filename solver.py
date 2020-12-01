@@ -100,8 +100,6 @@ class Field:
   def IsPlayerPositionValid(self, pos):
     return pos in self._supportPoints and pos not in self._grillPoints
 
-tuples = set()
-
 class Position:
   def __init__(self, field, sausages, playerPos, playerDir):
     self._sausages = [s.Clone() for s in sausages]
